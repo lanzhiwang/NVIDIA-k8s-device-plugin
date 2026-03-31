@@ -16,19 +16,35 @@ ARG GOLANG_VERSION=1.20.1
 ARG CUDA_IMAGE=cuda
 ARG CUDA_VERSION=11.6.1
 ARG BASE_DIST=ubuntu20.04
+
 FROM golang:${GOLANG_VERSION} as build
+# [build 1/5] FROM docker.io/library/golang:1.20.2@sha256:f7099345b8e4a93c62dc5102e7eb19a9cdbad12e7e322644eeaba355d70e616d
 
 WORKDIR /build
+# [build 2/5] WORKDIR /build
+
 COPY . .
+# [build 3/5] COPY . .
 
 RUN mkdir /artifacts
+# [build 4/5] RUN mkdir /artifacts
+
+# CGO_LDFLAGS_ALLOW='-Wl,--unresolved-symbols=ignore-in-object-files' GOOS=linux \
+# 	go build -ldflags "-s -w -X github.com/NVIDIA/k8s-device-plugin/internal/info.gitCommit= -X github.com/NVIDIA/k8s-device-plugin/internal/info.version=v0.14.0" -o /artifacts/config-manager github.com/NVIDIA/k8s-device-plugin/cmd/config-manager
+
+# CGO_LDFLAGS_ALLOW='-Wl,--unresolved-symbols=ignore-in-object-files' GOOS=linux \
+# 	go build -ldflags "-s -w -X github.com/NVIDIA/k8s-device-plugin/internal/info.gitCommit= -X github.com/NVIDIA/k8s-device-plugin/internal/info.version=v0.14.0" -o /artifacts/nvidia-device-plugin github.com/NVIDIA/k8s-device-plugin/cmd/nvidia-device-plugin
+
 ARG VERSION="N/A"
 RUN make PREFIX=/artifacts cmds
+# [build 5/5] RUN make PREFIX=/artifacts cmds
 
 FROM nvidia/${CUDA_IMAGE}:${CUDA_VERSION}-base-${BASE_DIST}
+# [stage-1 1/6] FROM docker.io/nvidia/cuda:12.1.0-base-ubuntu20.04@sha256:d0bf043a20ecc11940c5a452f67f239f9dec34a01d8f5583d2af93cf0da0f072
 
 # Remove CUDA libs(compat etc) in favor of libs installed by the NVIDIA driver
 RUN apt-get --purge -y autoremove cuda-*
+# [stage-1 2/6] RUN apt-get --purge -y autoremove cuda-*
 
 ENV NVIDIA_DISABLE_REQUIRE="true"
 ENV NVIDIA_VISIBLE_DEVICES=all
@@ -47,9 +63,13 @@ LABEL summary="NVIDIA device plugin for Kubernetes"
 LABEL description="See summary"
 
 RUN mkdir /licenses && mv /NGC-DL-CONTAINER-LICENSE /licenses/NGC-DL-CONTAINER-LICENSE
+# [stage-1 3/6] RUN mkdir /licenses && mv /NGC-DL-CONTAINER-LICENSE /licenses/NGC-DL-CONTAINER-LICENSE
 
 COPY --from=build /artifacts/config-manager       /usr/bin/config-manager
+# [stage-1 4/6] COPY --from=build /artifacts/config-manager       /usr/bin/config-manager
+
 COPY --from=build /artifacts/nvidia-device-plugin /usr/bin/nvidia-device-plugin
+# [stage-1 5/6] COPY --from=build /artifacts/nvidia-device-plugin /usr/bin/nvidia-device-plugin
 
 # Install / upgrade packages here that are required to resolve CVEs
 ARG CVE_UPDATES
@@ -58,5 +78,6 @@ RUN if [ -n "${CVE_UPDATES}" ]; then \
         apt-get update && apt-get upgrade -y ${CVE_UPDATES} && \
         rm -rf /var/lib/apt/lists/*; \
     fi
+# [stage-1 6/6] RUN if [ -n "" ]; then         rm -f /etc/apt/sources.list.d/cuda.list &&         apt-get update && apt-get upgrade -y  &&         rm -rf /var/lib/apt/lists/*;     fi
 
 ENTRYPOINT ["nvidia-device-plugin"]
