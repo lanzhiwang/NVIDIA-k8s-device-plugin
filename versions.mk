@@ -13,15 +13,25 @@
 # limitations under the License.
 
 DRIVER_NAME := k8s-device-plugin
+# DRIVER_NAME: k8s-device-plugin
+
 MODULE := github.com/NVIDIA/$(DRIVER_NAME)
+# MODULE: github.com/NVIDIA/k8s-device-plugin
 
 REGISTRY ?= nvcr.io/nvidia
+# REGISTRY: nvcr.io/nvidia
 
 VERSION ?= v0.19.0
+# VERSION: v0.19.0
 
 GOLANG_VERSION := $(shell ./hack/golang-version.sh)
+# GOLANG_VERSION: 1.26.1
 
 BUILDIMAGE_TAG ?= devel-go$(GOLANG_VERSION)
+# BUILDIMAGE_TAG: devel-go1.26.1
+
 BUILDIMAGE ?=  $(DRIVER_NAME):$(BUILDIMAGE_TAG)
+# BUILDIMAGE: k8s-device-plugin:devel-go1.26.1
 
 GIT_COMMIT ?= $(shell git describe --match="" --dirty --long --always --abbrev=40 2> /dev/null || echo "")
+# GIT_COMMIT: da27a4645b9fe19276ff8fc9920a85a9f30d977d-dirty
